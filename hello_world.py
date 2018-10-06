@@ -2,6 +2,7 @@ import psycopg2 as pg
 from config import conn_params
 
 from write.model import Model
+from write.database import Database
 from write.column_data_type import IntegerColumn, TextColumn
 
 params = conn_params()
@@ -20,7 +21,7 @@ def level_zero():
 def level_one():
     class TestTable(Model):
         def __init__(self):
-            Model.__init__(self, name='test_table')
+            Model.__init__(self, database=Database(database='mETL'), table_name='test_table')
 
         num_col = IntegerColumn()
         text_col = TextColumn()
@@ -34,5 +35,19 @@ def level_one():
     cur.close()
     conn.close()
 
+
+def level_two():
+    class TestTable(Model):
+        def __init__(self):
+            Model.__init__(self, database=Database(database='metl'), table_name='test_table')
+
+        num_col = IntegerColumn()
+        text_col = TextColumn()
+
+    test_table = TestTable()
+    test_table.create()
+    test_table.insert(num_col=0, text_col='hello world')
+
+
 if __name__ == '__main__':
-    level_one()
+    level_two()
