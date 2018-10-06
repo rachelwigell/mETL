@@ -1,14 +1,14 @@
 import psycopg2 as pg
-from config import conn_params
+from config import read_params
 
 from write.model import Model
 from write.database import Database
 from write.column_data_type import IntegerColumn, TextColumn
-
-params = conn_params()
+from write.queue import Queue
 
 
 def level_zero():
+    params = read_params()
     conn = pg.connect(host=params['host'], database=params['database'], user=params['user'])
     cur = conn.cursor()
     cur.execute("create table test_table(num_col INT, text_col TEXT)")
@@ -21,12 +21,14 @@ def level_zero():
 def level_one():
     class TestTable(Model):
         def __init__(self):
-            Model.__init__(self, database=Database(database='mETL'), table_name='test_table')
+            metl_queue = Queue('mETL.fifo')
+            Model.__init__(self, database=Database(queue=metl_queue, database='mETL'), table_name='test_table')
 
         num_col = IntegerColumn()
         text_col = TextColumn()
 
     test_table = TestTable()
+    params = read_params()
     conn = pg.connect(host=params['host'], database=params['database'], user=params['user'])
     cur = conn.cursor()
     cur.execute(test_table.create_sql())
@@ -39,7 +41,8 @@ def level_one():
 def level_two():
     class TestTable(Model):
         def __init__(self):
-            Model.__init__(self, database=Database(database='metl'), table_name='test_table')
+            metl_queue = Queue('mETL.fifo')
+            Model.__init__(self, database=Database(queue=metl_queue, database='metl'), table_name='test_table')
 
         num_col = IntegerColumn()
         text_col = TextColumn()

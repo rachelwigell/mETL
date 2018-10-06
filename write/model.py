@@ -25,7 +25,12 @@ class Model(object):
         return create_string
 
     def create(self):
-        self.database.execute(self.create_sql())
+        """
+        Execute the table creation SQL against the given database
+        """
+
+        conn, cur = self.database.execute(self.create_sql())
+        self.database.commit_and_close(conn, cur)
 
     def insert_sql(self, **kwargs):
         """
@@ -48,5 +53,24 @@ class Model(object):
         return insert_string
 
     def insert(self, **kwargs):
-        self.database.execute(self.insert_sql(**kwargs))
+        """
+        Execute the insertion SQL against the given database
+        """
+
+        conn, cur = self.database.execute(self.insert_sql(**kwargs))
+        self.write_to_queue(operation='insert', table=self.table_name, **kwargs)
+        self.database.commit_and_close(conn, cur)
+
+    def write_to_queue(self, **kwargs):
+        data = {}
+        for key, value in kwargs.iteritems():
+            data[key] = {'StringValue': str(value), 'DataType': 'String'}
+
+        self.database.queue.sqs_queue.send_message(
+            MessageAttributes=data,
+            MessageGroupId='mETL',
+            MessageBody='mETL insert data'
+        )
+
+
 
