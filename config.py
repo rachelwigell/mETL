@@ -2,7 +2,7 @@ import os
 from configparser import ConfigParser
 
 
-def conn_params(filename='database.ini', section='localhost'):
+def read_params(filename='database.ini', section='localhost'):
     # create a parser
     parser = ConfigParser()
     # read config file
