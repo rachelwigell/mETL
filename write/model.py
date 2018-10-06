@@ -3,8 +3,9 @@ class Model(object):
     Superclass for defining the schema of a table
     """
 
-    def __init__(self, name):
-        self.table_name = name
+    def __init__(self, database, table_name):
+        self.database = database
+        self.table_name = table_name
 
     def create_sql(self):
         """
@@ -22,6 +23,9 @@ class Model(object):
         create_string += ', '.join(col_array)
         create_string += ')'
         return create_string
+
+    def create(self):
+        self.database.execute(self.create_sql())
 
     def insert_sql(self, **kwargs):
         """
@@ -42,4 +46,7 @@ class Model(object):
         insert_string += ', '.join(value_array)
         insert_string += ')'
         return insert_string
+
+    def insert(self, **kwargs):
+        self.database.execute(self.insert_sql(**kwargs))
 
