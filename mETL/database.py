@@ -4,11 +4,9 @@ import psycopg2 as pg
 class Database(object):
     """
     Define connection parameters to a database
-    as well as an AWS SQS queue to send logs to whenever writes occur
     """
 
-    def __init__(self, queue, host='localhost', port=5432, database='postgres', user='postgres'):
-        self.queue = queue
+    def __init__(self, host='localhost', port=5432, database='postgres', user='postgres'):
         self.host = host
         self.port = port
         self.database = database

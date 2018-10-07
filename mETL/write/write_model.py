@@ -1,11 +1,13 @@
-class Model(object):
+from model import Model
+
+
+class WriteModel(Model):
     """
     Superclass for defining the schema of a table
     """
 
     def __init__(self, database, table_name):
-        self.database = database
-        self.table_name = table_name
+        Model.__init__(self, database=database, table_name=table_name)
 
     def create_sql(self):
         """
@@ -71,6 +73,3 @@ class Model(object):
             MessageGroupId='mETL',
             MessageBody='mETL insert data'
         )
-
-
-
