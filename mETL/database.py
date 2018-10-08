@@ -1,14 +1,15 @@
 import psycopg2 as pg
+from queue import Queue
 
 
 class Database(object):
     """
     Define connection parameters to a database
-    as well as an AWS SQS queue to send logs to whenever writes occur
+    as well as an AWS SQS queue to send logs to write and read from
     """
 
-    def __init__(self, queue, host='localhost', port=5432, database='postgres', user='postgres'):
-        self.queue = queue
+    def __init__(self, queue_name, host='localhost', port=5432, database='postgres', user='postgres'):
+        self.queue = Queue(queue_name)
         self.host = host
         self.port = port
         self.database = database
@@ -38,5 +39,6 @@ class Database(object):
     def commit_and_close(conn, cur):
         conn.commit()
         cur.close()
-        conn.close()
+
+
 

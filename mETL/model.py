@@ -3,9 +3,9 @@ class Model(object):
     Superclass for defining the schema of a table
     """
 
-    def __init__(self, database, table_name):
-        self.database = database
+    def __init__(self, table_name, schema_name='public'):
         self.table_name = table_name
+        self.schema_name = schema_name
 
     def create_sql(self):
         """
@@ -14,7 +14,9 @@ class Model(object):
         :return: a PostgreSQL create statement
         """
 
-        create_string = 'CREATE TABLE {table_name}('.format(table_name=self.table_name)
+        create_string = '''
+            CREATE TABLE {schema_name}.{table_name}(
+        '''.format(schema_name=self.schema_name, table_name=self.table_name)
         col_array = []
         for column in self.__class__.__dict__:
             if not column.startswith('__'):
@@ -24,14 +26,6 @@ class Model(object):
         create_string += ')'
         return create_string
 
-    def create(self):
-        """
-        Execute the table creation SQL against the given database
-        """
-
-        conn, cur = self.database.execute(self.create_sql())
-        self.database.commit_and_close(conn, cur)
-
     def insert_sql(self, **kwargs):
         """
         Iterates over the given column name/value pairs and creates a PostgreSQL insert string
@@ -39,7 +33,9 @@ class Model(object):
         :return: a PostgreSQL insert statement
         """
 
-        insert_string = 'INSERT INTO {table_name}('.format(table_name=self.table_name)
+        insert_string = '''
+            INSERT INTO {schema_name}.{table_name}(
+            '''.format(schema_name=self.schema_name, table_name=self.table_name)
         col_array = []
         value_array = []
         for key, value in kwargs.iteritems():
@@ -51,26 +47,3 @@ class Model(object):
         insert_string += ', '.join(value_array)
         insert_string += ')'
         return insert_string
-
-    def insert(self, **kwargs):
-        """
-        Execute the insertion SQL against the given database
-        """
-
-        conn, cur = self.database.execute(self.insert_sql(**kwargs))
-        self.write_to_queue(operation='insert', table=self.table_name, **kwargs)
-        self.database.commit_and_close(conn, cur)
-
-    def write_to_queue(self, **kwargs):
-        data = {}
-        for key, value in kwargs.iteritems():
-            data[key] = {'StringValue': str(value), 'DataType': 'String'}
-
-        self.database.queue.sqs_queue.send_message(
-            MessageAttributes=data,
-            MessageGroupId='mETL',
-            MessageBody='mETL insert data'
-        )
-
-
-

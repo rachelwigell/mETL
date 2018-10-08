@@ -1,1 +1,4 @@
 /env
+mETL/aws_config.ini
+*.pyc
+.idea/

@@ -14,6 +14,24 @@ class Queue(object):
         sqs = session.resource('sqs')
         self.sqs_queue = sqs.get_queue_by_name(QueueName=queue_name)
 
-    def read_config_file(self, filename):
+    @staticmethod
+    def read_config_file(filename):
         aws_params = read_params(filename, section='mETL')
         return aws_params
+
+    def write_to_queue(self, **kwargs):
+        data = {}
+        for key, value in kwargs.iteritems():
+            data[key] = {'StringValue': str(value), 'DataType': 'String'}
+
+        self.sqs_queue.send_message(
+            MessageAttributes=data,
+            MessageGroupId='mETL',
+            MessageBody='mETL insert data'
+        )
+
+    def read_from_queue(self):
+        messages = self.sqs_queue.receive_messages(MaxNumberOfMessages=1, MessageAttributeNames=['.*'])
+        if len(messages) != 0:
+            message = messages[0]
+            return message.message_attributes
