@@ -1,5 +1,7 @@
 from database import Database
 from model import Model
+from raw_model import RawModel
+from transform import Transform
 
 
 class TransformDatabase(Database):
@@ -7,21 +9,21 @@ class TransformDatabase(Database):
     def __init__(self, queue_name, host='localhost', port=5432, database='postgres', user='postgres'):
         Database.__init__(self, queue_name, host=host, port=port, database=database, user=user)
 
-    def create(self, model):
+    def create(self, model, connection=None, cursor=None):
         """
         Execute the creation SQL for the given model against the database
         """
 
-        conn, cur = self.execute(model.create_sql())
-        self.commit_and_close(conn, cur)
+        connection, cursor = self.execute(model.create_sql(), connection=connection, cursor=cursor)
+        return connection, cursor
 
-    def insert(self, model, **kwargs):
+    def insert(self, model, connection=None, cursor=None, **kwargs):
         """
         Execute the insertion SQL for the given model against the database
         """
 
-        conn, cur = self.execute(model.insert_sql(**kwargs))
-        self.commit_and_close(conn, cur)
+        connection, cursor = self.execute(model.insert_sql(**kwargs), connection=connection, cursor=cursor)
+        return connection, cursor
 
     def create_all_tables(self):
         """
@@ -31,8 +33,9 @@ class TransformDatabase(Database):
         for model in self.__class__.__dict__:
             if not model.startswith('__'):
                 obj = getattr(self, model)
-                if isinstance(obj, Model):
-                    self.create(model=obj)
+                if isinstance(obj, RawModel):
+                    connection, cursor = self.create(model=obj)
+                    self.commit_and_close(connection, cursor)
 
     def get_table_by_name(self, table_name, schema_name):
         """
@@ -48,6 +51,9 @@ class TransformDatabase(Database):
                 if isinstance(obj, Model):
                     if obj.table_name == table_name and obj.schema_name == schema_name:
                         return obj
+        raise ValueError('No table by name {schema}.{table} found in database {db}'.format(schema=schema_name,
+                                                                                           table=table_name,
+                                                                                           db=self.database))
 
     def get_table_by_source_name(self, source_table_name, source_schema_name):
         """
@@ -57,18 +63,44 @@ class TransformDatabase(Database):
         :return: model object for the corresponding table copy
         """
 
-        for model in self.__class__.__dict__:
-            if not model.startswith('__'):
-                obj = getattr(self, model)
-                if isinstance(obj, Model):
+        for name in self.__class__.__dict__:
+            if not name.startswith('__'):
+                obj = getattr(self, name)
+                if isinstance(obj, RawModel):
                     if obj.source_table_name == source_table_name and obj.source_schema_name == source_schema_name:
                         return obj
+        raise ValueError('No table by with source name {schema}.{table} found in database {db}'.format(
+            schema=source_schema_name,
+            table=source_table_name,
+            db=self.database))
+
+    def get_transforms_to_update(self, table_obj):
+        tables = []
+
+        for name in self.__class__.__dict__:
+            if not name.startswith('__'):
+                obj = getattr(self, name)
+                if isinstance(obj, Transform):
+                    if table_obj in obj.source_tables:
+                        tables.append(obj)
+        return tables
 
     def process_queue_message(self, message):
-        print message
-        copy_table = self.get_table_by_source_name(source_schema_name=message['schema']['StringValue'],
-                                                   source_table_name=message['table']['StringValue'])
-        operation = message['operation']['StringValue']
+        attributes = message.message_attributes
+
+        # update the copy
+        copy_table = self.get_table_by_source_name(source_schema_name=attributes['schema']['StringValue'],
+                                                   source_table_name=attributes['table']['StringValue'])
+        operation = attributes['operation']['StringValue']
         func = getattr(self, operation)
-        args = {x: message[x]['StringValue'] for x in message if x not in ('operation', 'schema', 'table')}
-        func(copy_table, **args)
+        args = {x: attributes[x]['StringValue'] for x in attributes if x not in ('operation', 'schema', 'table')}
+        conn, cur = func(copy_table, **args)
+
+        # update affected transforms
+        transforms = self.get_transforms_to_update(table_obj=copy_table)
+        for transform in transforms:
+            self.create(transform, conn, cur)
+
+        message.delete()
+
+        self.commit_and_close(conn, cur)

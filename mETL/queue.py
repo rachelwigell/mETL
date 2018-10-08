@@ -1,5 +1,6 @@
 import boto3
 from config import read_params
+import random
 
 
 class Queue(object):
@@ -27,11 +28,14 @@ class Queue(object):
         self.sqs_queue.send_message(
             MessageAttributes=data,
             MessageGroupId='mETL',
-            MessageBody='mETL insert data'
+            MessageBody='mETL insert data',
+            MessageDeduplicationId=str(random.getrandbits(128))
         )
 
     def read_from_queue(self):
         messages = self.sqs_queue.receive_messages(MaxNumberOfMessages=1, MessageAttributeNames=['.*'])
         if len(messages) != 0:
             message = messages[0]
-            return message.message_attributes
+            return message
+        else:
+            raise ValueError('No messages returned from queue {queue}'.format(queue=self.queue_name))

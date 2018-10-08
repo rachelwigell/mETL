@@ -21,6 +21,8 @@ class WriteModel(Model):
     def insert(self, **kwargs):
         """
         Execute the insertion SQL against the given database
+        Don't commit the db operation until the queue has been written to successfully to ensure
+        the queue and database stay in sync
         """
 
         conn, cur = self.database.execute(self.insert_sql(**kwargs))

@@ -23,22 +23,24 @@ class Database(object):
 
         return pg.connect(host=self.host, port=self.port, database=self.database, user=self.user)
 
-    def execute(self, sql_string):
+    def execute(self, sql_string, connection=None, cursor=None):
         """
         Opens a connection to this database, executes the given SQL string, then closes the connection
         :return: The psycopg connection and cursor objects
         """
 
-        conn = self.connect()
-        cur = conn.cursor()
-        cur.execute(sql_string)
-
-        return conn, cur
+        if not connection:
+            connection = self.connect()
+        if not cursor:
+            cursor = connection.cursor()
+        try:
+            cursor.execute(sql_string)
+            return connection, cursor
+        except pg.Error as e:
+            cursor.close()
+            raise e
 
     @staticmethod
-    def commit_and_close(conn, cur):
-        conn.commit()
-        cur.close()
-
-
-
+    def commit_and_close(connection, cursor):
+        connection.commit()
+        cursor.close()
