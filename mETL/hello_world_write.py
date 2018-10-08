@@ -19,6 +19,10 @@ def level_zero():
 
 def level_one():
     class TestTable(WriteModel):
+        def __init__(self):
+            metl_queue = Queue('mETL.fifo')
+            WriteModel.__init__(self, database=Database(queue=metl_queue, database='mETL'), table_name='test_table')
+
         num_col = IntegerColumn()
         text_col = TextColumn()
 
@@ -35,6 +39,10 @@ def level_one():
 
 def level_two():
     class TestTable(WriteModel):
+        def __init__(self):
+            metl_queue = Queue('mETL.fifo')
+            WriteModel.__init__(self, database=Database(queue=metl_queue, database='metl'), table_name='test_table')
+
         num_col = IntegerColumn()
         text_col = TextColumn()
 
@@ -43,5 +51,30 @@ def level_two():
     test_table.insert(num_col=0, text_col='hello world')
 
 
+def level_three():
+    class Colors(WriteModel):
+        id = IntegerColumn()
+        name = TextColumn()
+
+    class Users(WriteModel):
+        id = IntegerColumn()
+        name = TextColumn()
+        favorite_color_id = IntegerColumn()
+
+    color_table = Colors(database=Database(queue_name='mETL.fifo', database='metl'), table_name='colors')
+    user_table = Users(database=Database(queue_name='mETL.fifo', database='metl'), table_name='users')
+    color_table.create()
+    user_table.create()
+    color_table.insert(id=0, name='red')
+    color_table.insert(id=1, name='orange')
+    color_table.insert(id=2, name='yellow')
+    color_table.insert(id=3, name='green')
+    color_table.insert(id=4, name='blue')
+    color_table.insert(id=5, name='purple')
+    user_table.insert(id=0, name='Rachel', favorite_color_id=4)
+    user_table.insert(id=1, name='Matt', favorite_color_id=4)
+    user_table.insert(id=2, name='Josh', favorite_color_id=3)
+
+
 if __name__ == '__main__':
-    level_two()
+    level_three()

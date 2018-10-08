@@ -3,7 +3,7 @@ class Model(object):
     Superclass for defining the schema of a table
     """
 
-    def __init__(self, table_name, schema_name='public'):
+    def __init__(self, table_name, schema_name):
         self.table_name = table_name
         self.schema_name = schema_name
 
@@ -15,13 +15,15 @@ class Model(object):
         """
 
         create_string = '''
-            CREATE TABLE {schema_name}.{table_name}(
+            CREATE TABLE IF NOT EXISTS {schema_name}.{table_name}(
         '''.format(schema_name=self.schema_name, table_name=self.table_name)
+
         col_array = []
         for column in self.__class__.__dict__:
             if not column.startswith('__'):
                 column_obj = getattr(self, column)
                 col_array.append('{name} {data_type}'.format(name=column, data_type=column_obj.postgres_name))
+
         create_string += ', '.join(col_array)
         create_string += ')'
         return create_string
@@ -35,15 +37,17 @@ class Model(object):
 
         insert_string = '''
             INSERT INTO {schema_name}.{table_name}(
-            '''.format(schema_name=self.schema_name, table_name=self.table_name)
+        '''.format(schema_name=self.schema_name, table_name=self.table_name)
+
         col_array = []
-        value_array = []
+        val_array = []
         for key, value in kwargs.iteritems():
             col_array.append(key)
             value = "'{value}'".format(value=str(value))
-            value_array.append(value)
+            val_array.append(value)
+
         insert_string += ', '.join(col_array)
         insert_string += ') VALUES ('
-        insert_string += ', '.join(value_array)
+        insert_string += ', '.join(val_array)
         insert_string += ')'
         return insert_string
