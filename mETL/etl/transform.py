@@ -11,7 +11,7 @@ class Transform(Model):
 
     def transform(self):
         # all subclasses must define
-        pass
+        raise ValueError('transform must be defined for all instances of Transform!')
 
     def recalculate_sql(self):
         recalculate_string = 'with '

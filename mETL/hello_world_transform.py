@@ -2,6 +2,7 @@ from etl.raw_model import RawModel
 from etl.transform_database import TransformDatabase
 from column_data_type import IntegerColumn, TextColumn
 from etl.transform import Transform
+from etl.query import Query
 
 
 def level_zero():
@@ -50,6 +51,36 @@ def level_one():
 
     message = colors_database.queue.read_from_queue()
     colors_database.process_queue_message(message)
+
+
+def level_two():
+    class ColorsDatabase(TransformDatabase):
+        class Colors(RawModel):
+            id = IntegerColumn()
+            name = TextColumn()
+
+        class Users(RawModel):
+            id = IntegerColumn()
+            name = TextColumn()
+            favorite_color_id = IntegerColumn()
+
+        color_table = Colors(table_name='colors')
+        user_table = Users(table_name='users')
+
+        favorite_colors = Transform(table_name='favorite_colors', source_tables=[color_table, user_table])
+        favorite_colors.transform = (Query().select(color_id=Colors.id, color_name=Colors.name,
+                                                    user_ids=Query.functions.array_agg(Users.id),
+                                                    user_names=Query.functions.array_agg(Users.name))
+                                     .from_table(Colors)
+                                     .join(Users, how='inner', left_on=Colors.id, right_on=Users.favorite_color_id)
+                                     .group_by(Colors.id, Colors.name))
+
+    colors_database = ColorsDatabase(queue_name='mETL.fifo', database='metl')
+    colors_database.create_all_tables()
+
+    message = colors_database.queue.read_from_queue()
+    colors_database.process_queue_message(message)
+
 
 if __name__ == '__main__':
     level_one()
