@@ -64,16 +64,16 @@ def level_two():
             name = TextColumn()
             favorite_color_id = IntegerColumn()
 
-        color_table = Colors(table_name='colors')
-        user_table = Users(table_name='users')
+        colors = Colors(table_name='colors')
+        users = Users(table_name='users')
 
-        favorite_colors = Transform(table_name='favorite_colors', source_tables=[color_table, user_table])
-        favorite_colors.transform = (Query().select(color_id=Colors.id, color_name=Colors.name,
-                                                    user_ids=Query.functions.array_agg(Users.id),
-                                                    user_names=Query.functions.array_agg(Users.name))
-                                     .from_table(Colors)
-                                     .join(Users, how='inner', left_on=Colors.id, right_on=Users.favorite_color_id)
-                                     .group_by(Colors.id, Colors.name))
+        favorite_colors = Transform(table_name='favorite_colors', source_tables=[colors, users])
+        favorite_colors.transform = (Query()
+                                     .select(user_id=users.id, name=users.name,
+                                             favorite_color_id=colors.id, favorite_color_name=colors.name)
+                                     .from_table(users)
+                                     .join(colors, how='inner', left_on=users.favorite_color_id, right_on=colors.id)
+                                     .build)
 
     colors_database = ColorsDatabase(queue_name='mETL.fifo', database='metl')
     colors_database.create_all_tables()
@@ -83,4 +83,4 @@ def level_two():
 
 
 if __name__ == '__main__':
-    level_one()
+    level_two()

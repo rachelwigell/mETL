@@ -1,4 +1,5 @@
 from model import Model
+from column_data_type import ColumnDataType
 
 
 class RawModel(Model):
@@ -13,5 +14,12 @@ class RawModel(Model):
             self.source_table_name = table_name
         else:
             self.source_table_name = source_table_name
+
+        for name in self.__class__.__dict__:
+            if not name.startswith('__'):
+                obj = getattr(self, name)
+                if isinstance(obj, ColumnDataType):
+                    obj.table = self
+                    obj.column_name = name
 
 

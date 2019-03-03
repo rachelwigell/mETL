@@ -16,7 +16,7 @@ class WriteModel(Model):
         """
 
         conn, cur = self.database.execute(self.create_sql())
-        self.database.commit_and_close(conn, cur)
+        self.database._commit_and_close(conn, cur)
 
     def insert(self, **kwargs):
         """
@@ -27,4 +27,4 @@ class WriteModel(Model):
 
         conn, cur = self.database.execute(self.insert_sql(**kwargs))
         self.database.queue.write_to_queue(operation='insert', schema=self.schema_name, table=self.table_name, **kwargs)
-        self.database.commit_and_close(conn, cur)
+        self.database._commit_and_close(conn, cur)

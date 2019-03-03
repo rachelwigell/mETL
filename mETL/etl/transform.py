@@ -28,9 +28,9 @@ class Transform(Model):
         return recalculate_string
 
     def create_sql(self):
-        return 'create table {schema}.{table} as ({recalculate_sql})'.format(schema=self.schema_name,
-                                                                             table=self.table_name,
-                                                                             recalculate_sql=self.recalculate_sql())
+        return 'create table {schema}.{table} as ({transform})'.format(schema=self.schema_name,
+                                                                       table=self.table_name,
+                                                                       transform=self.transform())
 
     def insert_sql(self, **kwargs):
         pass

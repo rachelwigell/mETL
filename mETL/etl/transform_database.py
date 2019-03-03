@@ -35,9 +35,9 @@ class TransformDatabase(Database):
                 obj = getattr(self, model)
                 if isinstance(obj, RawModel):
                     connection, cursor = self.create(model=obj)
-                    self.commit_and_close(connection, cursor)
+                    self._commit_and_close(connection, cursor)
 
-    def get_table_by_name(self, table_name, schema_name):
+    def __get_table_by_name(self, table_name, schema_name):
         """
         Returns the model object for a table in this database with the given name
         :param table_name: name of the table to find
@@ -55,7 +55,7 @@ class TransformDatabase(Database):
                                                                                            table=table_name,
                                                                                            db=self.database))
 
-    def get_table_by_source_name(self, source_table_name, source_schema_name):
+    def __get_table_by_source_name(self, source_table_name, source_schema_name):
         """
         Returns the model object for a table in this database with the given source name
         :param source_table_name: name of the source table
@@ -74,7 +74,7 @@ class TransformDatabase(Database):
             table=source_table_name,
             db=self.database))
 
-    def get_transforms_to_update(self, table_obj):
+    def __get_transforms_to_update(self, table_obj):
         tables = []
 
         for name in self.__class__.__dict__:
@@ -89,18 +89,18 @@ class TransformDatabase(Database):
         attributes = message.message_attributes
 
         # update the copy
-        copy_table = self.get_table_by_source_name(source_schema_name=attributes['schema']['StringValue'],
-                                                   source_table_name=attributes['table']['StringValue'])
+        copy_table = self.__get_table_by_source_name(source_schema_name=attributes['schema']['StringValue'],
+                                                     source_table_name=attributes['table']['StringValue'])
         operation = attributes['operation']['StringValue']
         func = getattr(self, operation)
         args = {x: attributes[x]['StringValue'] for x in attributes if x not in ('operation', 'schema', 'table')}
         conn, cur = func(copy_table, **args)
 
         # update affected transforms
-        transforms = self.get_transforms_to_update(table_obj=copy_table)
+        transforms = self.__get_transforms_to_update(table_obj=copy_table)
         for transform in transforms:
             self.create(transform, conn, cur)
 
         message.delete()
 
-        self.commit_and_close(conn, cur)
+        self._commit_and_close(conn, cur)
