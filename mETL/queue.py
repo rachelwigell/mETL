@@ -1,6 +1,7 @@
 import boto3
-from config import read_params
 import random
+from six import iteritems
+from .config import read_params
 
 
 class Queue(object):
@@ -22,7 +23,7 @@ class Queue(object):
 
     def write_to_queue(self, **kwargs):
         data = {}
-        for key, value in kwargs.iteritems():
+        for key, value in iteritems(kwargs):
             data[key] = {'StringValue': str(value), 'DataType': 'String'}
 
         self.sqs_queue.send_message(

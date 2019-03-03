@@ -1,4 +1,4 @@
-from model import Model
+from ..model import Model
 
 
 class Transform(Model):
@@ -13,24 +13,10 @@ class Transform(Model):
         # all subclasses must define
         raise ValueError('transform must be defined for all instances of Transform!')
 
-    def recalculate_sql(self):
-        recalculate_string = 'with '
-
-        subq_array = []
-        for table in self.source_tables:
-            subq = '{name} as (select * from {schema}.{name})'.format(name=table.table_name,
-                                                                      schema=table.schema_name)
-            subq_array.append(subq)
-
-        recalculate_string += ', '.join(subq_array)
-        recalculate_string += ' '
-        recalculate_string += self.transform()
-        return recalculate_string
-
     def create_sql(self):
-        return 'create table {schema}.{table} as ({transform})'.format(schema=self.schema_name,
+        return 'CREATE TABLE {schema}.{table} AS ({transform})'.format(schema=self.schema_name,
                                                                        table=self.table_name,
-                                                                       transform=self.transform())
+                                                                       transform=self.transform()['rebuild_sql'])
 
-    def insert_sql(self, **kwargs):
+    def process_transaction(self, operation, **args):
         pass

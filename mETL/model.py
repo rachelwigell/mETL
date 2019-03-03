@@ -1,3 +1,6 @@
+from six import iteritems
+
+
 class Model(object):
     """
     Superclass for defining the schema of a table
@@ -41,7 +44,7 @@ class Model(object):
 
         col_array = []
         val_array = []
-        for key, value in kwargs.iteritems():
+        for key, value in iteritems(kwargs):
             col_array.append(key)
             value = "'{value}'".format(value=str(value))
             val_array.append(value)

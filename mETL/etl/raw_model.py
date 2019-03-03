@@ -1,5 +1,5 @@
-from model import Model
-from column_data_type import ColumnDataType
+from ..model import Model
+from ..column_data_type import ColumnDataType
 
 
 class RawModel(Model):

@@ -1,9 +1,9 @@
 import psycopg2 as pg
-from config import read_params
+from mETL.config import read_params
 
-from write.write_model import WriteModel
-from database import Database
-from column_data_type import IntegerColumn, TextColumn
+from mETL.write.write_model import WriteModel
+from mETL.database import Database
+from mETL.column_data_type import IntegerColumn, TextColumn
 
 
 def level_zero():

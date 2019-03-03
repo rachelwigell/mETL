@@ -1,7 +1,7 @@
-from database import Database
-from model import Model
-from raw_model import RawModel
-from transform import Transform
+from ..database import Database
+from ..model import Model
+from .raw_model import RawModel
+from .transform import Transform
 
 
 class TransformDatabase(Database):
@@ -13,7 +13,6 @@ class TransformDatabase(Database):
         """
         Execute the creation SQL for the given model against the database
         """
-
         connection, cursor = self.execute(model.create_sql(), connection=connection, cursor=cursor)
         return connection, cursor
 
@@ -75,6 +74,11 @@ class TransformDatabase(Database):
             db=self.database))
 
     def __get_transforms_to_update(self, table_obj):
+        """
+        Returns all the transforms that are dependent on the given table
+        :param table_obj: the table being modified
+        :return: a list of table objects representing dependent transforms
+        """
         tables = []
 
         for name in self.__class__.__dict__:
@@ -99,7 +103,8 @@ class TransformDatabase(Database):
         # update affected transforms
         transforms = self.__get_transforms_to_update(table_obj=copy_table)
         for transform in transforms:
-            self.create(transform, conn, cur)
+            # transform.process_transaction(operation, **args)
+            self.create(transform)
 
         message.delete()
 

@@ -1,5 +1,5 @@
 import psycopg2 as pg
-from queue import Queue
+from mETL.queue import Queue
 
 
 class Database(object):
