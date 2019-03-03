@@ -1,4 +1,4 @@
-from model import Model
+from ..model import Model
 
 
 class Transform(Model):
@@ -9,28 +9,18 @@ class Transform(Model):
         else:
             self.source_tables = source_tables
 
-    def transform(self):
+    def transform(self, **kwargs):
         # all subclasses must define
-        pass
-
-    def recalculate_sql(self):
-        recalculate_string = 'with '
-
-        subq_array = []
-        for table in self.source_tables:
-            subq = '{name} as (select * from {schema}.{name})'.format(name=table.table_name,
-                                                                      schema=table.schema_name)
-            subq_array.append(subq)
-
-        recalculate_string += ', '.join(subq_array)
-        recalculate_string += ' '
-        recalculate_string += self.transform()
-        return recalculate_string
+        raise ValueError('transform must be defined for all instances of Transform!')
 
     def create_sql(self):
-        return 'create table {schema}.{table} as ({recalculate_sql})'.format(schema=self.schema_name,
-                                                                             table=self.table_name,
-                                                                             recalculate_sql=self.recalculate_sql())
+        return 'CREATE TABLE {schema}.{table} AS ({transform})'.format(schema=self.schema_name,
+                                                                       table=self.table_name,
+                                                                       transform=self.transform()['rebuild_sql'])
 
-    def insert_sql(self, **kwargs):
-        pass
+    def process_transaction(self, operation, table, **args):
+        if operation == 'insert':
+            return '''
+                INSERT INTO {schema}.{table} ({transform})
+            '''.format(schema=self.schema_name, table=self.table_name,
+                       transform=self.transform(insert_table=table, data=args)['insert_sql'])

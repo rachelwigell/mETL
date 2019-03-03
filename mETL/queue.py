@@ -1,13 +1,14 @@
 import boto3
-from config import read_params
 import random
+from six import iteritems
+from .config import read_params
 
 
 class Queue(object):
     def __init__(self, queue_name, aws_config_filename='aws_config.ini'):
         self.queue_name = queue_name
 
-        aws_params = self.read_config_file(aws_config_filename)
+        aws_params = self.__read_config_file(aws_config_filename)
 
         session = boto3.session.Session(aws_access_key_id=aws_params['aws_access_key_id'],
                                         aws_secret_access_key=aws_params['aws_secret_access_key'],
@@ -16,14 +17,20 @@ class Queue(object):
         self.sqs_queue = sqs.get_queue_by_name(QueueName=queue_name)
 
     @staticmethod
-    def read_config_file(filename):
+    def __read_config_file(filename):
         aws_params = read_params(filename, section='mETL')
         return aws_params
 
     def write_to_queue(self, **kwargs):
         data = {}
-        for key, value in kwargs.iteritems():
-            data[key] = {'StringValue': str(value), 'DataType': 'String'}
+        for key, value in iteritems(kwargs):
+            if type(value) == str:
+                data_type = 'String'
+            elif type(value) == int:
+                data_type = 'Number'
+            else:
+                raise ValueError('Data types besides str and int not currently supported')
+            data[key] = {'StringValue': str(value), 'DataType': data_type}
 
         self.sqs_queue.send_message(
             MessageAttributes=data,

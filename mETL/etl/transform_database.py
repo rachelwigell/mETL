@@ -1,7 +1,8 @@
-from database import Database
-from model import Model
-from raw_model import RawModel
-from transform import Transform
+from psycopg2 import ProgrammingError
+from ..database import Database
+from ..model import Model
+from .raw_model import RawModel
+from .transform import Transform
 
 
 class TransformDatabase(Database):
@@ -13,7 +14,6 @@ class TransformDatabase(Database):
         """
         Execute the creation SQL for the given model against the database
         """
-
         connection, cursor = self.execute(model.create_sql(), connection=connection, cursor=cursor)
         return connection, cursor
 
@@ -23,6 +23,20 @@ class TransformDatabase(Database):
         """
 
         connection, cursor = self.execute(model.insert_sql(**kwargs), connection=connection, cursor=cursor)
+        return connection, cursor
+
+    def insert_or_create(self, model, operation, table, connection=None, cursor=None, **args):
+        """
+        Attempt to do an insert. If the table doesn't exist, create it.
+        """
+        try:
+            connection, cursor = self.execute(model.process_transaction(operation, table, **args),
+                                              connection=connection, cursor=cursor)
+        except ProgrammingError as e:
+            if 'does not exist' in str(e):
+                connection, cursor = self.create(model)
+            else:
+                raise e
         return connection, cursor
 
     def create_all_tables(self):
@@ -35,9 +49,9 @@ class TransformDatabase(Database):
                 obj = getattr(self, model)
                 if isinstance(obj, RawModel):
                     connection, cursor = self.create(model=obj)
-                    self.commit_and_close(connection, cursor)
+                    self._commit_and_close(connection, cursor)
 
-    def get_table_by_name(self, table_name, schema_name):
+    def __get_table_by_name(self, table_name, schema_name):
         """
         Returns the model object for a table in this database with the given name
         :param table_name: name of the table to find
@@ -55,7 +69,7 @@ class TransformDatabase(Database):
                                                                                            table=table_name,
                                                                                            db=self.database))
 
-    def get_table_by_source_name(self, source_table_name, source_schema_name):
+    def __get_table_by_source_name(self, source_table_name, source_schema_name):
         """
         Returns the model object for a table in this database with the given source name
         :param source_table_name: name of the source table
@@ -74,7 +88,12 @@ class TransformDatabase(Database):
             table=source_table_name,
             db=self.database))
 
-    def get_transforms_to_update(self, table_obj):
+    def __get_transforms_to_update(self, table_obj):
+        """
+        Returns all the transforms that are dependent on the given table
+        :param table_obj: the table being modified
+        :return: a list of table objects representing dependent transforms
+        """
         tables = []
 
         for name in self.__class__.__dict__:
@@ -89,18 +108,21 @@ class TransformDatabase(Database):
         attributes = message.message_attributes
 
         # update the copy
-        copy_table = self.get_table_by_source_name(source_schema_name=attributes['schema']['StringValue'],
-                                                   source_table_name=attributes['table']['StringValue'])
+        copy_table = self.__get_table_by_source_name(source_schema_name=attributes['schema']['StringValue'],
+                                                     source_table_name=attributes['table']['StringValue'])
         operation = attributes['operation']['StringValue']
         func = getattr(self, operation)
-        args = {x: attributes[x]['StringValue'] for x in attributes if x not in ('operation', 'schema', 'table')}
+        args = {x: {'value': attributes[x]['StringValue'], 'type': attributes[x]['DataType']} for x in attributes
+                if x not in ('operation', 'schema', 'table')}
         conn, cur = func(copy_table, **args)
 
         # update affected transforms
-        transforms = self.get_transforms_to_update(table_obj=copy_table)
+        transforms = self.__get_transforms_to_update(table_obj=copy_table)
+        table = attributes['table']['StringValue']
         for transform in transforms:
-            self.create(transform, conn, cur)
+            # conn, cur = self.create(transform, conn, cur)
+            conn, cur = self.insert_or_create(transform, operation, table, conn, cur, **args)
 
         message.delete()
 
-        self.commit_and_close(conn, cur)
+        self._commit_and_close(conn, cur)

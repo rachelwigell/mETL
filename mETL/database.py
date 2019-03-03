@@ -1,5 +1,5 @@
 import psycopg2 as pg
-from queue import Queue
+from mETL.queue import Queue
 
 
 class Database(object):
@@ -15,7 +15,7 @@ class Database(object):
         self.database = database
         self.user = user
 
-    def connect(self):
+    def __connect(self):
         """
         Connects to the database using the given parameters
         :return: a psycopg connection object
@@ -30,7 +30,7 @@ class Database(object):
         """
 
         if not connection:
-            connection = self.connect()
+            connection = self.__connect()
         if not cursor:
             cursor = connection.cursor()
         try:
@@ -41,6 +41,6 @@ class Database(object):
             raise e
 
     @staticmethod
-    def commit_and_close(connection, cursor):
+    def _commit_and_close(connection, cursor):
         connection.commit()
         cursor.close()

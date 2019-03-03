@@ -2,3 +2,4 @@ configparser==3.5.0
 postgres==2.2.2
 psycopg2==2.7.5
 six==1.11.0
+boto3==1.9.18
