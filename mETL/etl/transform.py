@@ -9,7 +9,7 @@ class Transform(Model):
         else:
             self.source_tables = source_tables
 
-    def transform(self):
+    def transform(self, **kwargs):
         # all subclasses must define
         raise ValueError('transform must be defined for all instances of Transform!')
 
@@ -18,5 +18,9 @@ class Transform(Model):
                                                                        table=self.table_name,
                                                                        transform=self.transform()['rebuild_sql'])
 
-    def process_transaction(self, operation, **args):
-        pass
+    def process_transaction(self, operation, table, **args):
+        if operation == 'insert':
+            return '''
+                INSERT INTO {schema}.{table} ({transform})
+            '''.format(schema=self.schema_name, table=self.table_name,
+                       transform=self.transform(insert_table=table, data=args)['insert_sql'])

@@ -79,6 +79,7 @@ def level_two():
     colors_database.create_all_tables()
 
     message = colors_database.queue.read_from_queue()
+    #message = {'favorite_color_id': {'StringValue': '3', 'DataType': 'String'}, 'id': {'StringValue': '3', 'DataType': 'String'}, 'name': {'StringValue': 'Kevin', 'DataType': 'String'}, 'operation': {'StringValue': 'insert', 'DataType': 'String'}, 'schema': {'StringValue': 'public', 'DataType': 'String'}, 'table': {'StringValue': 'users', 'DataType': 'String'}}
     colors_database.process_queue_message(message)
 
 

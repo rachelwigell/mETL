@@ -24,7 +24,13 @@ class Queue(object):
     def write_to_queue(self, **kwargs):
         data = {}
         for key, value in iteritems(kwargs):
-            data[key] = {'StringValue': str(value), 'DataType': 'String'}
+            if type(value) == str:
+                data_type = 'String'
+            elif type(value) == int:
+                data_type = 'Number'
+            else:
+                raise ValueError('Data types besides str and int not currently supported')
+            data[key] = {'StringValue': str(value), 'DataType': data_type}
 
         self.sqs_queue.send_message(
             MessageAttributes=data,

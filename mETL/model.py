@@ -44,7 +44,8 @@ class Model(object):
 
         col_array = []
         val_array = []
-        for key, value in iteritems(kwargs):
+        for key, hash_map in iteritems(kwargs):
+            value = hash_map['value'] if type(hash_map) == dict else hash_map
             col_array.append(key)
             value = "'{value}'".format(value=str(value))
             val_array.append(value)

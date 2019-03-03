@@ -1,3 +1,4 @@
+from psycopg2 import ProgrammingError
 from ..database import Database
 from ..model import Model
 from .raw_model import RawModel
@@ -22,6 +23,20 @@ class TransformDatabase(Database):
         """
 
         connection, cursor = self.execute(model.insert_sql(**kwargs), connection=connection, cursor=cursor)
+        return connection, cursor
+
+    def insert_or_create(self, model, operation, table, connection=None, cursor=None, **args):
+        """
+        Attempt to do an insert. If the table doesn't exist, create it.
+        """
+        try:
+            connection, cursor = self.execute(model.process_transaction(operation, table, **args),
+                                              connection=connection, cursor=cursor)
+        except ProgrammingError as e:
+            if 'does not exist' in str(e):
+                connection, cursor = self.create(model)
+            else:
+                raise e
         return connection, cursor
 
     def create_all_tables(self):
@@ -97,14 +112,16 @@ class TransformDatabase(Database):
                                                      source_table_name=attributes['table']['StringValue'])
         operation = attributes['operation']['StringValue']
         func = getattr(self, operation)
-        args = {x: attributes[x]['StringValue'] for x in attributes if x not in ('operation', 'schema', 'table')}
+        args = {x: {'value': attributes[x]['StringValue'], 'type': attributes[x]['DataType']} for x in attributes
+                if x not in ('operation', 'schema', 'table')}
         conn, cur = func(copy_table, **args)
 
         # update affected transforms
         transforms = self.__get_transforms_to_update(table_obj=copy_table)
+        table = attributes['table']['StringValue']
         for transform in transforms:
-            # transform.process_transaction(operation, **args)
-            self.create(transform)
+            # conn, cur = self.create(transform, conn, cur)
+            conn, cur = self.insert_or_create(transform, operation, table, conn, cur, **args)
 
         message.delete()
 
