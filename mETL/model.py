@@ -55,3 +55,16 @@ class Model(object):
         insert_string += ', '.join(val_array)
         insert_string += ')'
         return insert_string
+
+    def delete_sql(self, **kwargs):
+        delete_string = '''
+            DELETE FROM {schema_name}.{table_name} WHERE 
+        '''.format(schema_name=self.schema_name, table_name=self.table_name)
+
+        clause_array = []
+        for key, hash_map in iteritems(kwargs):
+            value = hash_map['value'] if type(hash_map) == dict else hash_map
+            clause_array.append('{column} = {value}'.format(column=key, value=value))
+
+        delete_string += ' AND '.join(clause_array)
+        return delete_string

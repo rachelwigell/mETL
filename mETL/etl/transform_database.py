@@ -25,12 +25,12 @@ class TransformDatabase(Database):
         connection, cursor = self.execute(model.insert_sql(**kwargs), connection=connection, cursor=cursor)
         return connection, cursor
 
-    def insert_or_create(self, model, operation, table, connection=None, cursor=None, **args):
+    def insert_or_create(self, model, table, connection=None, cursor=None, **args):
         """
         Attempt to do an insert. If the table doesn't exist, create it.
         """
         try:
-            connection, cursor = self.execute(model.process_transaction(operation, table, **args),
+            connection, cursor = self.execute(model.insert_sql(table, **args),
                                               connection=connection, cursor=cursor)
         except ProgrammingError as e:
             if 'does not exist' in str(e):
@@ -39,17 +39,26 @@ class TransformDatabase(Database):
                 raise e
         return connection, cursor
 
+    def delete(self, model, connection=None, cursor=None, **kwargs):
+        connection, cursor = self.execute(model.delete_sql(**kwargs), connection=connection, cursor=cursor)
+        return connection, cursor
+
+    def delete_transformed(self, model, table, connection=None, cursor=None, **args):
+        connection, cursor = self.execute(model.delete_sql(table, **args), connection=connection, cursor=cursor)
+        return connection, cursor
+
     def create_all_tables(self):
         """
         Executes the creation SQL for all the models defined on this database
         """
 
-        for model in self.__class__.__dict__:
-            if not model.startswith('__'):
-                obj = getattr(self, model)
-                if isinstance(obj, RawModel):
-                    connection, cursor = self.create(model=obj)
-                    self._commit_and_close(connection, cursor)
+        for instance_type in [RawModel, Transform]:
+            for model in self.__class__.__dict__:
+                if not model.startswith('__'):
+                    obj = getattr(self, model)
+                    if isinstance(obj, instance_type):
+                        connection, cursor = self.create(model=obj)
+                        self.commit_and_close(connection, cursor)
 
     def __get_table_by_name(self, table_name, schema_name):
         """
@@ -120,9 +129,11 @@ class TransformDatabase(Database):
         transforms = self.__get_transforms_to_update(table_obj=copy_table)
         table = attributes['table']['StringValue']
         for transform in transforms:
-            # conn, cur = self.create(transform, conn, cur)
-            conn, cur = self.insert_or_create(transform, operation, table, conn, cur, **args)
+            if operation == 'insert':
+                conn, cur = self.insert_or_create(transform, table, conn, cur, **args)
+            elif operation == 'delete':
+                conn, cur = self.delete_transformed(transform, table, conn, cur, **args)
 
         message.delete()
 
-        self._commit_and_close(conn, cur)
+        self.commit_and_close(conn, cur)

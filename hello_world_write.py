@@ -76,5 +76,20 @@ def level_three():
     user_table.insert(id=2, name='Josh', favorite_color_id=3)
 
 
+def level_four():
+    class Colors(WriteModel):
+        id = IntegerColumn()
+        name = TextColumn()
+
+    class Users(WriteModel):
+        id = IntegerColumn()
+        name = TextColumn()
+        favorite_color_id = IntegerColumn()
+
+    color_table = Colors(database=Database(queue_name='mETL.fifo', database='metl'), table_name='colors')
+    user_table = Users(database=Database(queue_name='mETL.fifo', database='metl'), table_name='users')
+    #color_table.delete(id=4)
+    color_table.insert(id=4, name='blurple')
+
 if __name__ == '__main__':
-    level_three()
+    level_four()

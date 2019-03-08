@@ -14,13 +14,18 @@ class Transform(Model):
         raise ValueError('transform must be defined for all instances of Transform!')
 
     def create_sql(self):
-        return 'CREATE TABLE {schema}.{table} AS ({transform})'.format(schema=self.schema_name,
-                                                                       table=self.table_name,
-                                                                       transform=self.transform()['rebuild_sql'])
+        return '''
+            CREATE TABLE IF NOT EXISTS {schema}.{table} AS ({transform})
+        '''.format(schema=self.schema_name, table=self.table_name, transform=self.transform()['rebuild_sql'])
 
-    def process_transaction(self, operation, table, **args):
-        if operation == 'insert':
-            return '''
-                INSERT INTO {schema}.{table} ({transform})
-            '''.format(schema=self.schema_name, table=self.table_name,
-                       transform=self.transform(insert_table=table, data=args)['insert_sql'])
+    def insert_sql(self, table, **args):
+        return '''
+            INSERT INTO {schema}.{table} {transform}
+        '''.format(schema=self.schema_name, table=self.table_name,
+                   transform=self.transform(insert_table=table, data=args)['insert_sql'])
+
+    def delete_sql(self, table, **args):
+        return '''
+            DELETE FROM {schema}.{table} {where_clause}
+        '''.format(schema=self.schema_name, table=self.table_name,
+                   where_clause=self.transform(delete_table=table, data=args)['delete_sql'])
