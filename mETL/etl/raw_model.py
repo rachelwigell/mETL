@@ -23,3 +23,4 @@ class RawModel(Model):
                     obj.column_name = name
 
 
+

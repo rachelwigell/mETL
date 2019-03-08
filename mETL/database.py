@@ -41,6 +41,6 @@ class Database(object):
             raise e
 
     @staticmethod
-    def _commit_and_close(connection, cursor):
+    def commit_and_close(connection, cursor):
         connection.commit()
         cursor.close()
